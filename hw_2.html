@@ -1,0 +1,235 @@
+<html>
+	<head>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+	</head>
+	<body>
+		<script>
+let apples = [];
+let gridSize = 10;
+let appleSize = 50;
+let timeLeft = 60; // 60 seconds
+let gameOver = false;
+let startX, startY, endX, endY;
+let dragging = false;
+let score = 0;
+let gameOverFontSize = 64;
+let gameOverFinalSize;
+let fadeInComplete = false;
+let fadeOutComplete = false;
+let tryAgainSize = appleSize * 3;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  startX = (width - (gridSize * (appleSize + 10))) / 2 + appleSize / 2;
+  startY = (height - (gridSize * (appleSize + 10))) / 2 + appleSize / 2;
+  initializeApples();
+  setInterval(decreaseTime, 1000); // 매 초마다 시간 감소
+  gameOverFinalSize = dist(0, 0, width, height) / 2;
+}
+
+function draw() {
+  if (gameOver) {
+    if (!fadeInComplete) {
+      background(151, 255, 0);
+      drawGameTitle();
+      drawTryAgainButton();
+      return;
+    }
+
+    if (!fadeOutComplete) {
+      background(0);
+      for (let apple of apples) {
+        apple.show();
+      }
+      drawTimeBar();
+      drawGameOver();
+      for (let apple of apples) {
+        apple.y += random(5, 10);
+      }
+      if (apples.length > 0 && apples[apples.length - 1].y > height + appleSize) {
+        apples = [];
+        setTimeout(() => {
+          fadeOutComplete = true;
+          fadeInComplete = false;
+          setTimeout(() => {
+            fadeInComplete = true;
+          }, 2000); // 2초 후 페이드인 시작
+        }, 4000); // 4초 후 페이드아웃 완료
+      }
+      return;
+    }
+  }
+
+  background(255);
+
+  for (let apple of apples) {
+    apple.show();
+  }
+
+  drawTimeBar();
+
+  if (dragging) {
+    noStroke();
+    fill(151, 255, 0, 100);
+    rect(startX, startY, mouseX - startX, mouseY - startY);
+  }
+
+  if (apples.length === 0) {
+    fill(0);
+    textAlign(CENTER, CENTER);
+    textSize(64);
+    textFont('monospace');
+    text("Congraduation!", width / 2, height / 2);
+  }
+
+  fill(0);
+  noStroke();
+  textAlign(LEFT, CENTER);
+  textSize(24);
+  text(`Score: ${score}`, width - 250, height - 65);
+}
+
+function mousePressed() {
+  if (gameOver && fadeInComplete) {
+    if (dist(mouseX, mouseY, width / 2, height / 2) < tryAgainSize / 2) {
+      restartGame();
+      return;
+    }
+  }
+
+  startX = mouseX;
+  startY = mouseY;
+  dragging = true;
+}
+
+function mouseReleased() {
+  endX = mouseX;
+  endY = mouseY;
+  dragging = false;
+  let selectedApples = [];
+
+  for (let i = apples.length - 1; i >= 0; i--) {
+    if (apples[i].isInSelection(startX, startY, endX, endY)) {
+      selectedApples.push(apples[i]);
+    }
+  }
+
+  let sum = selectedApples.reduce((acc, apple) => acc + apple.value, 0);
+  if (sum === 10) {
+    score += 5;
+    for (let apple of selectedApples) {
+      apples.splice(apples.indexOf(apple), 1);
+      apple.tween();
+    }
+  }
+}
+
+function drawTimeBar() {
+  fill(200);
+  rect(width - 210, height - 50, 200, 30);
+  fill(0, 255, 0);
+  let timeWidth = map(timeLeft, 0, 60, 0, 200);
+  rect(width - 210, height - 50, timeWidth, 30);
+}
+
+function decreaseTime() {
+  if (timeLeft > 0 && !gameOver) {
+    timeLeft--;
+  } else if (timeLeft === 0) {
+    gameOver = true;
+  }
+}
+
+function drawGameOver() {
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(gameOverFontSize);
+  textFont('monospace');
+  text("Game Over", width / 2, height / 2);
+  gameOverFontSize = min(gameOverFontSize + 2, gameOverFinalSize);
+}
+
+function drawTryAgainButton() {
+  fill(255, 0, 0);
+  noStroke();
+  ellipse(width / 2, height / 2, tryAgainSize, tryAgainSize);
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(20);
+  textFont('monospace');
+  text("Try Again", width / 2, height / 2);
+}
+
+function drawGameTitle() {
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(64);
+  textFont('monospace');
+  text("Mark Apple Game", width / 2, height / 2 - 200);
+}
+
+function restartGame() {
+  score = 0;
+  timeLeft = 60;
+  gameOver = false;
+  gameOverFontSize = 64;
+  fadeOutComplete = false;
+  fadeInComplete = false;
+  initializeApples();
+  loop();
+}
+
+function initializeApples() {
+  apples = [];
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      let x = startX + i * (appleSize + 10);
+      let y = startY + j * (appleSize + 10);
+      let value = floor(random(1, 10));
+      apples.push(new Apple(x, y, value));
+    }
+  }
+}
+
+class Apple {
+  constructor(x, y, value) {
+    this.x = x;
+    this.y = y;
+    this.value = value;
+    this.size = appleSize;
+    this.tweening = false;
+    this.tweenX = 0;
+    this.tweenY = 0;
+  }
+
+  show() {
+    if (this.tweening) {
+      this.x += this.tweenX;
+      this.y += this.tweenY;
+    }
+    fill(255, 0, 0);
+    noStroke();
+    ellipse(this.x, this.y, this.size, this.size);
+    fill(139, 69, 19);
+    rect(this.x - 2, this.y - this.size / 2 - 5, 4, 5); // 사과 꼭지 길이 줄임
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    textFont('monospace');
+    text(this.value, this.x, this.y);
+  }
+
+  isInSelection(x1, y1, x2, y2) {
+    return this.x > min(x1, x2) && this.x < max(x1, x2) && this.y > min(y1, y2) && this.y < max(y1, y2);
+  }
+
+  tween() {
+    this.tweening = true;
+    this.tweenX = random(-5, 5);
+    this.tweenY = random(5, 10);
+  }
+}
+		</script>
+	</body>
+</html>
+	

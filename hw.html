@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Force and Typography</title>
+
+  <!-- p5.js 라이브러리 (그래픽 및 인터랙션) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+
+  <!-- Matter.js 라이브러리 (물리 엔진) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.18.0/matter.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    // 필요한 기능들 변수화
+    let Engine = Matter.Engine,
+        Runner = Matter.Runner,
+        Bodies = Matter.Bodies,
+        Composite = Matter.Composite,
+        Body = Matter.Body;
+
+    // 물리엔진 생성
+    let engine = Engine.create();
+
+    // 러너 생성
+    let runner = Runner.create();
+
+    // 러너로 엔진 작동
+    Runner.run(runner, engine);
+
+    // 화면에 보이는 텍스트에 적용되는 변수 선언
+    let gravity = new p5.Vector(0, 0.1);
+    let palette = ["#ff5733", "#00ffff", "#33ff8a", "#fdff73"];
+    let modules = [];
+
+    // Module 클래스 정의
+    class Module {
+      constructor(position, size, c, isStatic) {
+        this.size = size;
+        this.color = c;
+
+        // 정사각형 모듈을 10x10 크기로 설정
+        this.body = Bodies.rectangle(
+          position.x, position.y,
+          this.size.x, this.size.y
+        );
+
+        this.body.isStatic = isStatic;
+        Composite.add(engine.world, this.body);
+      }
+
+      display() {
+        let position = this.body.position;
+        let angle = this.body.angle;
+
+        rectMode(CENTER);
+        push();
+          translate(position.x, position.y);
+          fill(this.color);
+          rotate(angle);
+          rect(0, 0, this.size.x, this.size.y);
+        pop();
+      }
+    }
+
+    // p5.js의 setup 함수
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      background("white");
+      textSize(150);
+      textAlign(CENTER, CENTER);
+      textStyle(BOLD);
+      fill("black");
+      noStroke();
+      textLeading(130);
+
+      let textContent = "Happy Coding^^"; // 줄바꿈이 포함된 텍스트
+      text(textContent, width / 2, height / 2);
+
+      let gap = 10;
+
+      for (let y = 0; y < height; y += gap) {
+        for (let x = 0; x < width; x += gap) {
+          let c = get(x, y);
+          let b = brightness(c);
+          if (b == 0) {
+            modules.push(
+              new Module(
+                new p5.Vector(x, y),
+                new p5.Vector(10, 10), // 정사각형 크기 고정
+                "white",
+                true // 정사각형은 고정된 상태
+              )
+            );
+          }
+        }
+      }
+
+      // 바닥에 고정된 사각형 추가
+      modules.push(
+        new Module(
+          new p5.Vector(width / 2, height),
+          new p5.Vector(width, 10),
+          "black",
+          true
+        )
+      );
+    }
+
+    // p5.js의 draw 함수
+    function draw() {
+      if (mouseIsPressed) {
+        modules.push(
+          new Module(
+            new p5.Vector(mouseX, mouseY),
+            new p5.Vector(15, 15), // 정사각형 크기 고정
+            random(palette),
+            false // 마우스 클릭 시 생성되는 사각형은 고정되지 않음
+          )
+        );
+      }
+
+      background("black");
+      for (let i = 0; i < modules.length; i++) {
+        modules[i].display();
+      }
+    }
+  </script>
+</body>
+</html>
